@@ -152,6 +152,54 @@ app.post('/trees/:treeID/join', (req, res) => {
         });
     });
 });
+// 트리에 노트 달기
+app.post('/trees/:treeID/notes', (req, res) => {
+    const { treeID } = req.params;
+    const { user_id, message, pos_x, pos_y } = req.body;
+
+    // 입력 검증
+    if (!user_id || !message) {
+        return res.status(400).send('user_id와 message는 필수입니다.');
+    }
+
+    const sql = `
+        insert into note (tree_id,user_id,message,pos_x,pos_y)
+        values (?,?,?,?,?)
+    `;
+    const params = [treeID, user_id, message, pos_x || 0, pos_y || 0];
+
+    db.query(sql, params, (err, result) => {
+        if (err) {
+            console.error('MEMO 등록 실패', err);
+            return res.status(500).send('메모 등록 실패');
+        }
+        return res.status(200).json({
+            message: '메모 등록 성공',
+            note_id: result.insertId
+        });
+    });
+});
+
+// 트리 노트 조회
+app.get('/trees/:treeID/notes', (req, res) => {
+    const { treeID } = req.params;
+    const sql = `
+        select n.note_id, n.message, n.pos_x, n.pos_y, n.created_at, u.user_id, u.username as author
+        from note n
+        join user u on n.user_id = u.user_id
+        where n.tree_id = ?
+        order by n.created_at desc
+    `;
+
+    db.query(sql,[treeID],(err,result)=>{
+        if(err) {
+            console.error('메모 조회 실패:',err);
+            return res.status(500).send('메모 조회 실패');
+        }
+        return res.status(200).json(result);
+    });
+});
+
 
 //start server
 app.listen(port, () => {
