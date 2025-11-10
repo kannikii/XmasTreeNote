@@ -8,7 +8,7 @@ export default function Header({ user, onLogout }) {
 
   return (
     <header>
-      <h1 onClick={() => navigate("/")}>🎄 Pixel Christmas SNS</h1>
+      <h1 onClick={() => navigate("/")}>🎄 ChristmasTree Note </h1>
       <nav>
         {user ? (
           <>

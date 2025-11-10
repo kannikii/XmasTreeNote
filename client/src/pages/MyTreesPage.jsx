@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import './MyTreesPage.css'
 
 function MyTreesPage({ user }) {
   const [trees, setTrees] = useState([])
@@ -65,52 +66,61 @@ function MyTreesPage({ user }) {
 
   if (!user) {
     return (
-      <div style={styles.container}>
-        <h3>로그인 후 이용 가능합니다.</h3>
+      <div className="my-trees-container">
+        <div className="my-trees-panel">
+          <h3>로그인 후 이용 가능합니다.</h3>
+        </div>
       </div>
     )
   }
 
   return (
-    <div style={styles.container}>
-      <h2>{user.username}님의 트리 목록 🎄</h2>
+    <div className="my-trees-container">
+      <h2 className="my-trees-title">{user.username}님의 트리 목록 🎄</h2>
 
       {/* ✅ 트리 생성 폼 */}
-      <div style={styles.form}>
+      <div className="my-trees-form">
         <input
           type="text"
           placeholder="트리 이름 입력"
           value={treeName}
           onChange={(e) => setTreeName(e.target.value)}
-          style={styles.input}
+          className="my-trees-input"
         />
         <select
           value={treeType}
           onChange={(e) => setTreeType(e.target.value)}
-          style={styles.select}
+          className="my-trees-select"
         >
           <option value="PUBLIC">공용 트리</option>
           <option value="PRIVATE">개인 트리</option>
         </select>
-        <button onClick={handleCreateTree} style={styles.button}>
+        <button onClick={handleCreateTree} className="my-trees-primary-btn">
           트리 생성
         </button>
       </div>
 
       {/* ✅ 트리 목록 표시 */}
-      <ul style={styles.treeList}>
+      <ul className="my-trees-list">
+        {trees.length === 0 && (
+          <li className="my-trees-card my-trees-empty">
+            아직 생성된 트리가 없습니다. 새로운 트리를 만들어보세요!
+          </li>
+        )}
         {trees.map((t) => (
-          <li key={t.tree_id} style={styles.treeItem}>
-            <strong>{t.tree_name}</strong> <br />
-            {t.tree_type === 'PUBLIC' ? '🌍 공용 트리' : '🔒 개인 트리'}
-            <br />
+          <li key={t.tree_id} className="my-trees-card">
+            <strong className="tree-name">{t.tree_name}</strong>
+            <div className="tree-meta">
+              {t.tree_type === 'PUBLIC' ? '🌍 공용 트리' : '🔒 개인 트리'}
+            </div>
             {t.tree_type === 'PRIVATE' && (
-              <small>초대 코드: {t.tree_key}</small>
+              <div className="tree-meta tree-meta--secondary">
+                초대 코드: {t.tree_key}
+              </div>
             )}
-            <br />
             <button
               onClick={() => navigate(`/tree/${t.tree_id}`)} // ✅ 트리 페이지로 이동
-              style={styles.viewBtn}
+              className="my-trees-view-btn"
             >
               트리로 이동
             </button>
@@ -119,54 +129,6 @@ function MyTreesPage({ user }) {
       </ul>
     </div>
   )
-}
-
-const styles = {
-  container: {
-    textAlign: 'center',
-    padding: '50px',
-  },
-  form: {
-    marginBottom: '20px',
-  },
-  input: {
-    padding: '6px',
-    width: '200px',
-    marginRight: '10px',
-  },
-  select: {
-    padding: '6px',
-    marginRight: '10px',
-  },
-  button: {
-    padding: '6px 12px',
-    backgroundColor: '#2a9d8f',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
-  treeList: {
-    listStyle: 'none',
-    padding: 0,
-  },
-  treeItem: {
-    margin: '20px auto',
-    padding: '15px',
-    borderRadius: '12px',
-    width: '300px',
-    background: '#f8f9fa',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-  },
-  viewBtn: {
-    marginTop: '10px',
-    padding: '6px 12px',
-    backgroundColor: '#264653',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
 }
 
 export default MyTreesPage

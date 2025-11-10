@@ -42,7 +42,7 @@ export default function HomePage({ user }) {
   return (
     <div className="main-content">
       <Countdown />
-      <h2 className="main-title">🎁 Pixel Christmas World 🎁</h2>
+      <h2 className="main-title">🎁 Merry Christmas World 🎁</h2>
       <p className="subtitle">트리와 함께 추억을 남겨보세요.</p>
 
       <div style={{ marginTop: "40px", display: "flex", gap: "20px" }}>

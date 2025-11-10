@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import '../components/PixelForm.css'
 
 function LoginPage({ setUser }) {
   const [email, setEmail] = useState('')
@@ -34,58 +35,35 @@ function LoginPage({ setUser }) {
   }
 
   return (
-    <div style={styles.container}>
-      <h2>로그인</h2>
-      <form onSubmit={handleLogin} style={styles.form}>
-        <input
-          type="email"
-          placeholder="이메일"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="password"
-          placeholder="비밀번호"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
-        <button type="submit" style={styles.button}>
-          로그인
-        </button>
-      </form>
-      <p style={{ marginTop: '10px' }}>{message}</p>
+    <div className="pixel-form-container">
+      <div className="pixel-form-box">
+        <h2 className="pixel-form-title">로그인</h2>
+        <form onSubmit={handleLogin}>
+          <input
+            type="email"
+            placeholder="이메일"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="pixel-input"
+          />
+          <input
+            type="password"
+            placeholder="비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="pixel-input"
+          />
+          <button type="submit" className="pixel-button">
+            로그인
+          </button>
+        </form>
+        {message && <p className="pixel-link">{message}</p>}
+        <p className="pixel-link action" onClick={() => navigate('/register')}>
+          아직 계정이 없다면? 회원가입
+        </p>
+      </div>
     </div>
   )
-}
-
-const styles = {
-  container: {
-    textAlign: 'center',
-    marginTop: '60px',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-    alignItems: 'center',
-  },
-  input: {
-    width: '240px',
-    padding: '10px',
-    borderRadius: '6px',
-    border: '1px solid #ccc',
-  },
-  button: {
-    width: '260px',
-    padding: '10px',
-    backgroundColor: '#2a9d8f',
-    color: 'white',
-    border: 'none',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
 }
 
 export default LoginPage

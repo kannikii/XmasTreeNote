@@ -2,12 +2,13 @@
   background-color: #c0392b;
   border: 3px solid #fff;
   color: #fff;
-  font-size: 10px;
-  font-family: 'Press Start 2P', cursive;
-  padding: 8px 14px;
+  font-size: 14px;
+  font-family: 'Lanapixel', 'Press Start 2P', 'NeoDunggeunmo', cursive;
+  padding: 12px 22px;
   cursor: pointer;
   box-shadow: 4px 4px 0px #222;
   transition: all 0.1s ease-in-out;
+  border-radius: 14px;
 }
 
 .pixel-button:hover {
