@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import Countdown from '../components/Countdown'
 import treePageBg from '../assets/treePage-bg.gif'
@@ -16,6 +16,8 @@ function TreePage({ user }) {
   const [noteLikes, setNoteLikes] = useState({})
   const [noteComments, setNoteComments] = useState({})
   const [newComment, setNewComment] = useState('')
+  const [isCommentSubmitting, setIsCommentSubmitting] = useState(false)
+  const [likedNotes, setLikedNotes] = useState({})
   const [hasAccess, setHasAccess] = useState(false)
   const [isCheckingAccess, setIsCheckingAccess] = useState(true)
   const treeRef = useRef(null)
@@ -60,18 +62,62 @@ function TreePage({ user }) {
       .finally(() => setIsCheckingAccess(false))
   }, [user, treeId, navigate])
 
+  const loadComments = useCallback(async (noteId) => {
+    if (!noteId) return
+    try {
+      const res = await fetch(`http://localhost:3000/notes/${noteId}/comments`)
+      if (!res.ok) throw new Error('댓글 조회 실패')
+      const data = await res.json()
+      const comments = Array.isArray(data) ? data : []
+      setNoteComments((prev) => ({ ...prev, [noteId]: comments }))
+    } catch (error) {
+      console.error(`노트 ${noteId} 댓글 조회 실패:`, error)
+    }
+  }, [])
+
   useEffect(() => {
     if (!treeId || !hasAccess) return
 
-    fetch(`http://localhost:3000/trees/${treeId}/notes`)
-      .then((res) => {
+    const fetchNotes = async () => {
+      try {
+        const res = await fetch(`http://localhost:3000/trees/${treeId}/notes`)
         if (!res.ok) throw new Error('노트 불러오기 실패')
-        return res.json()
-      })
-      .then((data) => {
-        if (Array.isArray(data)) setNotes(data)
-      })
-      .catch((err) => console.error(err))
+        const data = await res.json()
+
+        if (!Array.isArray(data)) return
+        setNotes(data)
+        setLikedNotes({})
+
+        const noteIds = data
+          .map((note) => note?.note_id)
+          .filter((noteId) => typeof noteId === 'number' || typeof noteId === 'string')
+
+        if (noteIds.length === 0) {
+          setNoteLikes({})
+          return
+        }
+
+        const likeEntries = await Promise.all(
+          noteIds.map(async (noteId) => {
+            try {
+              const countRes = await fetch(`http://localhost:3000/notes/${noteId}/likes/count`)
+              if (!countRes.ok) throw new Error('좋아요 수 조회 실패')
+              const countData = await countRes.json()
+              return [noteId, countData.likeCount ?? 0]
+            } catch (error) {
+              console.error(`노트 ${noteId} 좋아요 수 조회 실패:`, error)
+              return [noteId, 0]
+            }
+          })
+        )
+
+        setNoteLikes(Object.fromEntries(likeEntries))
+      } catch (err) {
+        console.error(err)
+      }
+    }
+
+    fetchNotes()
   }, [treeId, hasAccess])
 
   const handleTreeClick = (e) => {
@@ -124,6 +170,9 @@ function TreePage({ user }) {
         author: user.username,
       }
       setNotes((prev) => [...prev, created])
+      setNoteLikes((prev) => ({ ...prev, [created.note_id]: 0 }))
+      setLikedNotes((prev) => ({ ...prev, [created.note_id]: false }))
+      setNoteComments((prev) => ({ ...prev, [created.note_id]: [] }))
       setShowModal(false)
       setNewNote('')
     } catch (error) {
@@ -133,6 +182,76 @@ function TreePage({ user }) {
       setIsSubmitting(false)
     }
   }
+
+  const handleToggleLike = async (noteId) => {
+    if (!noteId) return
+    if (!user) {
+      alert('로그인이 필요합니다!')
+      navigate('/login')
+      return
+    }
+
+    const alreadyLiked = likedNotes[noteId] === true
+
+    try {
+      const res = await fetch(`http://localhost:3000/notes/${noteId}/likes`, {
+        method: alreadyLiked ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id }),
+      })
+
+      if (!res.ok) throw new Error('좋아요 처리 실패')
+
+      const data = await res.json()
+      const latestCount =
+        typeof data.likeCount === 'number'
+          ? data.likeCount
+          : noteLikes[noteId] || 0
+
+      setNoteLikes((prev) => ({ ...prev, [noteId]: latestCount }))
+      setLikedNotes((prev) => ({ ...prev, [noteId]: !alreadyLiked }))
+    } catch (error) {
+      console.error(error)
+      alert('좋아요 처리 중 문제가 발생했습니다.')
+    }
+  }
+
+  const handleSubmitComment = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다!')
+      navigate('/login')
+      return
+    }
+    if (!activeNote?.note_id) return
+    const noteId = activeNote.note_id
+    const content = newComment.trim()
+    if (!content) return
+
+    try {
+      setIsCommentSubmitting(true)
+      const res = await fetch(`http://localhost:3000/notes/${noteId}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, content }),
+      })
+
+      if (!res.ok) throw new Error('댓글 등록 실패')
+      setNewComment('')
+      await loadComments(noteId)
+    } catch (error) {
+      console.error(error)
+      alert('댓글 등록 중 문제가 발생했습니다.')
+    } finally {
+      setIsCommentSubmitting(false)
+    }
+  }
+
+  const activeNoteId = activeNote?.note_id
+  const currentComments = activeNoteId ? noteComments[activeNoteId] : null
+  useEffect(() => {
+    if (!activeNoteId) return
+    loadComments(activeNoteId)
+  }, [activeNoteId, loadComments])
 
   if (isCheckingAccess) {
     return (
@@ -172,24 +291,33 @@ function TreePage({ user }) {
           onClick={handleTreeClick}
         >
           {notes.map((note) => (
-            <img
+            <div
               key={note.note_id || `${note.pos_x}-${note.pos_y}`}
-              src={noteImage}
-              alt="tree note"
-              className="tree-note"
+              className="tree-note-wrapper"
               style={{
                 position: 'absolute',
                 top: (note.pos_y ?? note.y) - 28,
                 left: (note.pos_x ?? note.x) - 24,
-                width: '64px',
-                height: '64px',
               }}
               onClick={(e) => {
                 e.stopPropagation()
                 setActiveNote(note)
                 setNewComment('')
               }}
-            />
+            >
+              <img
+                src={noteImage}
+                alt="tree note"
+                className="tree-note"
+                style={{
+                  width: '64px',
+                  height: '64px',
+                }}
+              />
+              <span className="tree-note-like-count">
+                ❤️ {noteLikes[note.note_id] ?? 0}
+              </span>
+            </div>
           ))}
         </div>
       </div>
@@ -236,30 +364,35 @@ function TreePage({ user }) {
 
             <div className="note-detail-actions">
               <button
-                className="pixel-button"
-                onClick={() =>
-                  setNoteLikes((prev) => {
-                    const current = prev[activeNote.note_id] || 0
-                    return { ...prev, [activeNote.note_id]: current + 1 }
-                  })
-                }
+                className={`pixel-button note-like-toggle ${
+                  likedNotes[activeNote.note_id] ? 'liked' : ''
+                }`}
+                onClick={() => handleToggleLike(activeNote.note_id)}
               >
-                ❤️ 좋아요 ({noteLikes[activeNote.note_id] || 0})
+                {likedNotes[activeNote.note_id] ? '💔 좋아요 취소' : '❤️ 좋아요'} (
+                {noteLikes[activeNote.note_id] ?? 0})
               </button>
             </div>
 
             <div className="note-comment-section">
               <h4>댓글</h4>
               <div className="note-comment-list">
-                {(noteComments[activeNote.note_id] || []).length === 0 && (
+                {!Array.isArray(currentComments) && (
+                  <p className="note-comment-empty">댓글을 불러오는 중입니다...</p>
+                )}
+                {Array.isArray(currentComments) && currentComments.length === 0 && (
                   <p className="note-comment-empty">첫 댓글을 남겨보세요!</p>
                 )}
-                {(noteComments[activeNote.note_id] || []).map((comment, idx) => (
-                  <div key={idx} className="note-comment-item">
-                    <span className="note-comment-author">{comment.author}</span>
-                    <p>{comment.content}</p>
-                  </div>
-                ))}
+                {Array.isArray(currentComments) &&
+                  currentComments.map((comment) => (
+                    <div
+                      key={comment.comment_id || `${comment.author}-${comment.content}`}
+                      className="note-comment-item"
+                    >
+                      <span className="note-comment-author">{comment.author || '익명'}</span>
+                      <p>{comment.content}</p>
+                    </div>
+                  ))}
               </div>
               <div className="note-comment-form">
                 <input
@@ -271,23 +404,13 @@ function TreePage({ user }) {
                 <button
                   className="pixel-button"
                   type="button"
-                  onClick={() => {
-                    if (!newComment.trim()) return
-                    const entry = {
-                      author: user?.username || '익명',
-                      content: newComment.trim(),
-                    }
-                    setNoteComments((prev) => {
-                      const prevList = prev[activeNote.note_id] || []
-                      return { ...prev, [activeNote.note_id]: [...prevList, entry] }
-                    })
-                    setNewComment('')
-                  }}
+                  onClick={handleSubmitComment}
+                  disabled={isCommentSubmitting}
                 >
-                  댓글 등록
+                  {isCommentSubmitting ? '등록 중...' : '댓글 등록'}
                 </button>
               </div>
-              <p className="note-comment-info">※ 현재 화면은 미리보기이며, 데이터베이스 연결 후 저장됩니다.</p>
+              <p className="note-comment-info">※ 댓글은 즉시 서버에 저장됩니다.</p>
             </div>
           </div>
         </div>

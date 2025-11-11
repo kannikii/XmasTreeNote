@@ -85,6 +85,22 @@
   background: transparent;
 }
 
+.tree-note-wrapper {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+
+.tree-note-like-count {
+  margin-top: 4px;
+  color: #fff;
+  font-size: 10px;
+  text-shadow: 2px 2px 0 #000;
+  font-family: 'Lanapixel', 'Press Start 2P', 'NeoDunggeunmo', cursive;
+}
+
 .note-textarea::placeholder {
   color: rgba(255, 255, 255, 0.7);
 }
@@ -188,6 +204,11 @@
   justify-content: flex-start;
   gap: 10px;
   margin-bottom: 20px;
+}
+
+.note-like-toggle.liked {
+  background-color: #e63946;
+  box-shadow: 2px 2px 0 #000;
 }
 
 .note-comment-section h4 {
